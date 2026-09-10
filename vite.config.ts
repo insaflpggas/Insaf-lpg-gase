@@ -22,6 +22,7 @@ function aistudioMediaPlugin(): Plugin {
               'aistudio',
             );
             const filePath = path.resolve(__dirname, 'public', relativePath);
+
             if (
               filePath.startsWith(aistudioDir + path.sep) &&
               fs.existsSync(filePath) &&
@@ -45,6 +46,7 @@ function aistudioMediaPlugin(): Plugin {
                 '.ogg': 'audio/ogg',
                 '.pdf': 'application/pdf',
               };
+
               res.setHeader(
                 'Content-Type',
                 mimeMap[ext] || 'application/octet-stream',
@@ -57,6 +59,7 @@ function aistudioMediaPlugin(): Plugin {
             // Fall through if URI decoding or file access fails
           }
         }
+
         next();
       });
     },
@@ -66,16 +69,21 @@ function aistudioMediaPlugin(): Plugin {
 
 export default defineConfig(() => {
   return {
+    base: '/Insaf-lpg-gase/',
+
     plugins: [react(), tailwindcss(), aistudioMediaPlugin()],
+
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),
       },
     },
+
     server: {
       // HMR is disabled in AI Studio via DISABLE_HMR env var.
-      // Do not modifyâfile watching is disabled to prevent flickering during agent edits.
+      // File watching is disabled to prevent flickering during agent edits.
       hmr: process.env.DISABLE_HMR !== 'true',
+
       // Disable file watching when DISABLE_HMR is true to save CPU during agent edits.
       watch: process.env.DISABLE_HMR === 'true' ? null : {},
     },
