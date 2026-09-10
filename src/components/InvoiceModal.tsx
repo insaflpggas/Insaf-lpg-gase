@@ -583,7 +583,7 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({
               className="px-6 py-2.5 text-xs font-black bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white rounded-xl shadow-lg flex items-center gap-1.5 transition-all"
             >
               <CheckCircle2 className="w-4 h-4" />
-              <span>بل جاری کریں / Create & Print Invoice</span>
+              <span>Save Bill / بل محفوظ کریں</span>
               <ArrowRight className="w-4 h-4" />
             </button>
           </div>

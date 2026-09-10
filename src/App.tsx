@@ -242,6 +242,7 @@ const MainAppContent: React.FC = () => {
         invoice={activeReceiptInvoice}
         onClose={() => setActiveReceiptInvoice(null)}
         onViewLedger={handleViewCustomerLedger}
+        onNavigate={setCurrentView}
       />
     </div>
   );

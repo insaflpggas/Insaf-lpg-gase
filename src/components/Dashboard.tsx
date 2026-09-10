@@ -72,10 +72,13 @@ export const Dashboard: React.FC<DashboardProps> = ({
     return bal > 0 ? acc + bal : acc;
   }, 0);
 
-  // Total Paid Amount (All invoice cash upfront + all separate payments)
+  // Total Paid Amount (All invoice cash upfront + all separate standalone payments)
+  const standalonePayments = payments.filter(
+    (p) => !p.referenceNumber || !invoices.some((inv) => inv.invoiceNumber === p.referenceNumber)
+  );
   const totalPaidAmount =
     invoices.reduce((acc, inv) => acc + (inv.amountPaid || 0), 0) +
-    payments.reduce((acc, p) => acc + (p.amount || 0), 0);
+    standalonePayments.reduce((acc, p) => acc + (p.amount || 0), 0);
 
   // Stock
   const fullStock = inventory.fullCylindersInStock;

@@ -63,14 +63,35 @@ interface AppContextType {
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
+// Execute full purge of any legacy demo data from localStorage
+const LEGACY_STORAGE_KEYS = [
+  'insaf_lpg_customers_v1',
+  'insaf_lpg_invoices_v1',
+  'insaf_lpg_payments_v1',
+  'insaf_lpg_cylinders_v1',
+  'insaf_lpg_inventory_v1',
+  'insaf_lpg_customers',
+  'insaf_lpg_invoices',
+  'insaf_lpg_payments',
+  'insaf_lpg_cylinders',
+  'insaf_lpg_inventory',
+];
+try {
+  LEGACY_STORAGE_KEYS.forEach((key) => {
+    localStorage.removeItem(key);
+  });
+} catch {
+  // safe fallback
+}
+
 const STORAGE_KEYS = {
-  CUSTOMERS: 'insaf_lpg_customers_v1',
-  INVOICES: 'insaf_lpg_invoices_v1',
-  PAYMENTS: 'insaf_lpg_payments_v1',
-  CYLINDERS: 'insaf_lpg_cylinders_v1',
-  INVENTORY: 'insaf_lpg_inventory_v1',
-  SETTINGS: 'insaf_lpg_settings_v1',
-  AUTH: 'insaf_lpg_auth_v1',
+  CUSTOMERS: 'insaf_lpg_prod_2026_customers',
+  INVOICES: 'insaf_lpg_prod_2026_invoices',
+  PAYMENTS: 'insaf_lpg_prod_2026_payments',
+  CYLINDERS: 'insaf_lpg_prod_2026_cylinders',
+  INVENTORY: 'insaf_lpg_prod_2026_inventory',
+  SETTINGS: 'insaf_lpg_prod_2026_settings',
+  AUTH: 'insaf_lpg_prod_2026_auth',
 };
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -79,7 +100,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const saved = localStorage.getItem(STORAGE_KEYS.CUSTOMERS);
     if (saved) {
       try {
-        return JSON.parse(saved);
+        const parsed: Customer[] = JSON.parse(saved);
+        // Discard any previous demo customers
+        return parsed.filter(
+          (c) =>
+            !c.name.includes('Tariq') &&
+            !c.name.includes('Imran') &&
+            !c.name.includes('Bilal') &&
+            !c.name.includes('Saleem')
+        );
       } catch {
         // fallback
       }
@@ -91,7 +120,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const saved = localStorage.getItem(STORAGE_KEYS.INVOICES);
     if (saved) {
       try {
-        return JSON.parse(saved);
+        const parsed: LPGInvoice[] = JSON.parse(saved);
+        return parsed.filter((inv) => !inv.customerName.includes('Tariq'));
       } catch {
         // fallback
       }
@@ -103,7 +133,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const saved = localStorage.getItem(STORAGE_KEYS.PAYMENTS);
     if (saved) {
       try {
-        return JSON.parse(saved);
+        const parsed: Payment[] = JSON.parse(saved);
+        return parsed.filter((p) => !p.customerName.includes('Tariq'));
       } catch {
         // fallback
       }
@@ -243,11 +274,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const totalInvoiceDebits = customerInvoices.reduce((acc, inv) => acc + (inv.subtotal || 0), 0);
       const totalInvoiceImmediatePayments = customerInvoices.reduce((acc, inv) => acc + (inv.amountPaid || 0), 0);
 
-      // Separate Payments
+      // Separate Payments (excluding payments auto-generated from invoices)
       const customerPayments = payments.filter((p) => p.customerId === customerId);
-      const totalPayments = customerPayments.reduce((acc, p) => acc + (p.amount || 0), 0);
+      const standalonePayments = customerPayments.filter(
+        (p) => !p.referenceNumber || !customerInvoices.some((inv) => inv.invoiceNumber === p.referenceNumber)
+      );
+      const totalStandalonePayments = standalonePayments.reduce((acc, p) => acc + (p.amount || 0), 0);
 
-      return opening + totalInvoiceDebits - totalInvoiceImmediatePayments - totalPayments;
+      return opening + totalInvoiceDebits - totalInvoiceImmediatePayments - totalStandalonePayments;
     },
     [customers, invoices, payments]
   );
@@ -322,9 +356,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           });
         });
 
-      // Payments
+      // Payments (excluding invoice upfront cash payments to prevent duplicates in ledger)
+      const customerInvoices = invoices.filter((inv) => inv.customerId === customerId);
       payments
-        .filter((p) => p.customerId === customerId)
+        .filter(
+          (p) =>
+            p.customerId === customerId &&
+            (!p.referenceNumber || !customerInvoices.some((inv) => inv.invoiceNumber === p.referenceNumber))
+        )
         .forEach((p) => {
           rawTxns.push({
             timestamp: new Date(p.date + ' ' + (p.time || '12:00 PM')).getTime() || new Date(p.createdAt).getTime(),
@@ -488,7 +527,28 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // 1. Save invoice
     setInvoices((prev) => [newInvoice, ...prev]);
 
-    // 2. Update stock & create Cylinder Transaction
+    // 2. If Amount Paid > 0, record in payments database
+    if (newInvoice.amountPaid > 0) {
+      const payId = `pay_${Date.now()}`;
+      const paymentNumber = getNextPaymentNumber();
+      const newPayment: Payment = {
+        id: payId,
+        paymentNumber,
+        customerId: newInvoice.customerId,
+        customerName: newInvoice.customerName,
+        customerMobile: newInvoice.customerMobile,
+        date: newInvoice.date,
+        time: newInvoice.time,
+        amount: newInvoice.amountPaid,
+        paymentMethod: 'Cash',
+        referenceNumber: invoiceNumber,
+        notes: `Cash received with Invoice #${invoiceNumber}`,
+        createdAt: new Date().toISOString(),
+      };
+      setPayments((prev) => [newPayment, ...prev]);
+    }
+
+    // 3. Update stock & create Cylinder Transaction
     // Rule: Full Stock decreases by quantity sold
     // Empty Stock increases by empty received
     // Empty given decreases Empty Stock
@@ -544,6 +604,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       // Remove transaction
       setCylinderTransactions((prev) => prev.filter((tx) => tx.relatedInvoiceId !== id));
     }
+
+    // Remove auto-generated payment if any
+    setPayments((prev) => prev.filter((p) => p.referenceNumber !== target.invoiceNumber));
 
     setInvoices((prev) => prev.filter((inv) => inv.id !== id));
   };

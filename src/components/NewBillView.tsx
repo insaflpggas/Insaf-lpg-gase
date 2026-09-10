@@ -540,14 +540,14 @@ export const NewBillView: React.FC<NewBillViewProps> = ({
             <button
               type="submit"
               disabled={customers.length === 0}
-              className="w-full bg-slate-900 hover:bg-slate-800 active:scale-[0.98] text-white font-black py-3.5 px-4 rounded-xl text-sm flex items-center justify-center gap-2 shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] text-white font-black py-3.5 px-4 rounded-xl text-sm flex items-center justify-center gap-2 shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <FileText className="w-5 h-5 text-amber-400" />
-              <span>بل بنائیں اور پرنٹ کریں / Generate Bill</span>
+              <FileText className="w-5 h-5 text-amber-200" />
+              <span>Save Bill / بل محفوظ کریں</span>
             </button>
 
             <div className="text-[11px] text-center text-slate-500 font-urdu">
-              بل بنتے ہی پرنٹ اور واٹس ایپ کا بٹن خودکار طور پر کھل جائے گا
+              بل محفوظ ہوتے ہی مکمل انوائس پرنٹ، ڈاؤن لوڈ اور واٹس ایپ کے لیے فوری ظاہر ہو جائے گی
             </div>
           </div>
         </div>
