@@ -1,0 +1,6 @@
+{
+  "name": "INSAAF LPG GAS",
+  "description": "Clean, modern LPG Gas business management, billing, customer khata, and cylinder tracking for INSAAF LPG GAS, Kot Abdul Malik, Dosako Chowk, Khaki Bazar.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
